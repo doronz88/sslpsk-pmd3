@@ -14,10 +14,7 @@
 
 from setuptools import setup, Extension
 
-import os
-import shutil
-import sys
-import platform
+import os, shutil, sys, platform
 
 if sys.platform == 'win32' and platform.architecture()[0] == '64bit':
     LIB_NAMES = ['libssl64MD', 'libcrypto64MD']
