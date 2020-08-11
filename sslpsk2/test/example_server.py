@@ -1,7 +1,7 @@
 from __future__ import print_function
 import socket
 import ssl
-import sslpsk
+import sslpsk2
 
 PSKS = {'client1' : b'abcdef',
         'client2' : b'123456'}
@@ -13,7 +13,7 @@ def server(host, port):
     tcp_sock.listen(1)
 
     sock, _ = tcp_sock.accept()
-    ssl_sock = sslpsk.wrap_socket(sock,
+    ssl_sock = sslpsk2.wrap_socket(sock,
                                   server_side = True,
                                   ssl_version=ssl.PROTOCOL_TLSv1,
                                   ciphers='ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH',

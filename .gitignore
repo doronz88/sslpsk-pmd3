@@ -1,5 +1,8 @@
 build/
 dist/
+openssl*/
+appveyor/
+.vscode/
 
 *.pyc
 *.so

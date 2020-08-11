@@ -12,6 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License
 
-import sslpsk.test
+import sslpsk2.test
 
-sslpsk.test.run()
+sslpsk2.test.run()

@@ -14,4 +14,4 @@
 
 from __future__ import absolute_import
 
-from sslpsk.sslpsk import wrap_socket
+from sslpsk2.sslpsk2 import wrap_socket

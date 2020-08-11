@@ -19,7 +19,7 @@ import _ssl
 import sys
 import weakref
 
-from sslpsk import _sslpsk
+from sslpsk2 import _sslpsk2
 
 _callbacks = {}
 
@@ -36,7 +36,7 @@ def _unregister_callback(ref):
     del _callbacks[ref.ssl_id]
 
 def _python_psk_client_callback(ssl_id, hint):
-    """Called by _sslpsk.c to return the (psk, identity) tuple for the socket with
+    """Called by _sslpsk2.c to return the (psk, identity) tuple for the socket with
     the specified ssl socket.
 
     """
@@ -58,7 +58,7 @@ def _sslobj(sock):
         return sock._sslobj._sslobj
 
 def _python_psk_server_callback(ssl_id, identity):
-    """Called by _sslpsk.c to return the psk for the socket with the specified
+    """Called by _sslpsk2.c to return the psk for the socket with the specified
     ssl socket.
 
     """
@@ -67,17 +67,17 @@ def _python_psk_server_callback(ssl_id, identity):
     else:
         return _callbacks[ssl_id](identity)
 
-_sslpsk.sslpsk_set_python_psk_client_callback(_python_psk_client_callback)
-_sslpsk.sslpsk_set_python_psk_server_callback(_python_psk_server_callback)
+_sslpsk2.sslpsk2_set_python_psk_client_callback(_python_psk_client_callback)
+_sslpsk2.sslpsk2_set_python_psk_server_callback(_python_psk_server_callback)
     
 def _ssl_set_psk_client_callback(sock, psk_cb):
-    ssl_id = _sslpsk.sslpsk_set_psk_client_callback(_sslobj(sock))
+    ssl_id = _sslpsk2.sslpsk2_set_psk_client_callback(_sslobj(sock))
     _register_callback(sock, ssl_id, psk_cb)
 
 def _ssl_set_psk_server_callback(sock, psk_cb, hint):
-    ssl_id = _sslpsk.sslpsk_set_accept_state(_sslobj(sock))
-    _      = _sslpsk.sslpsk_set_psk_server_callback(_sslobj(sock))
-    _      = _sslpsk.sslpsk_use_psk_identity_hint(_sslobj(sock), hint if hint else b"")
+    ssl_id = _sslpsk2.sslpsk2_set_accept_state(_sslobj(sock))
+    _      = _sslpsk2.sslpsk2_set_psk_server_callback(_sslobj(sock))
+    _      = _sslpsk2.sslpsk2_use_psk_identity_hint(_sslobj(sock), hint if hint else b"")
     _register_callback(sock, ssl_id, psk_cb)
 
 def wrap_socket(*args, **kwargs):

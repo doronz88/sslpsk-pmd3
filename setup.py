@@ -14,35 +14,44 @@
 
 from setuptools import setup, Extension
 
-import os, shutil, sys
+import os
+import shutil
+import sys
+import platform
 
-if sys.platform == 'win32':
-    LIB_NAMES = ['ssleay32MD', 'libeay32MD']
+if sys.platform == 'win32' and platform.architecture()[0] == '64bit':
+    LIB_NAMES = ['libssl64MD', 'libcrypto64MD']
+    DLL_NAMES = ['libcrypto-1_1-x64', 'libssl-1_1-x64']
+elif sys.platform == 'win32' and platform.architecture()[0] == '32bit':
+    LIB_NAMES = ['libssl32MD', 'libcrypto32MD']
+    DLL_NAMES = ['libcrypto-1_1', 'libssl-1_1']
 else:
     LIB_NAMES = ['ssl']
+    DLL_NAMES = []
 
-_sslpsk = Extension('sslpsk._sslpsk',
-                    sources = ['sslpsk/_sslpsk.c'],
-                    libraries = LIB_NAMES
-)
+_sslpsk2 = Extension('sslpsk2._sslpsk2',
+                    sources=['sslpsk2/_sslpsk2.c'],
+                    libraries=LIB_NAMES,
+                    include_dirs=['openssl/include/'],
+                    library_dirs=['openssl/lib/VC/']
+                    )
 
 try:
     # Symlink the libs so they can be included in the package data
     if sys.platform == 'win32':
-        for lib in LIB_NAMES:
-            shutil.copy2('openssl/bin/%s.dll'%lib, 'sslpsk/')
+        for lib in DLL_NAMES:
+            shutil.copy2('openssl/bin/%s.dll' % lib, 'sslpsk2/')
 
     setup(
-        name = 'sslpsk',
-        version = '1.0.0',
-        description = 'Adds TLS-PSK support to the Python ssl package',
-        author = 'David R. Bild',
-        author_email = 'david@davidbild.org',
+        name='sslpsk2',
+        version='1.0.1',
+        description='Adds TLS-PSK support to the Python ssl package',
+        author='Sidney Kuyateh',
+        author_email='sidneyjohn23@kuyateh.eu',
         license="Apache 2.0",
-        url = 'https://github.com/drbild/sslpsk',
-        download_url = 'https://github.com/drbild/sslpsk/archive/1.0.0.tar.gz',
-        keywords = ['ssl', 'tls', 'psk', 'tls-psk', 'preshared key'],
-        classifiers = [
+        url='https://github.com/autinerd/sslpsk2',
+        keywords=['ssl', 'tls', 'psk', 'tls-psk', 'preshared key'],
+        classifiers=[
             'Development Status :: 5 - Production/Stable',
             'Intended Audience :: Developers',
             'License :: OSI Approved :: Apache Software License',
@@ -53,20 +62,38 @@ try:
             'Programming Language :: Python :: 3.4',
             'Programming Language :: Python :: 3.5',
             'Programming Language :: Python :: 3.6',
+            'Programming Language :: Python :: 3.7',
+            'Programming Language :: Python :: 3.8',
             'Programming Language :: Python :: Implementation :: CPython',
             'Operating System :: POSIX',
             'Operating System :: Unix',
             'Operating System :: MacOS',
             'Operating System :: Microsoft'
         ],
-        packages = ['sslpsk', 'sslpsk.test'],
-        ext_modules = [_sslpsk],
-        package_data = {'' : ['%s.dll'%lib for lib in LIB_NAMES]},
-        test_suite = 'sslpsk.test',
-        zip_safe = False
+        packages=['sslpsk2', 'sslpsk2.test'],
+        ext_modules=[_sslpsk2],
+        package_data={'': ['%s.dll' % lib for lib in DLL_NAMES]},
+        test_suite='sslpsk2.test',
+        zip_safe=False
     )
-
+except OSError:
+    if sys.platform == 'win32' and platform.architecture()[0] == '64bit':
+        print('''
+Build not possible! Please insert the files
+    bin/libcrypto-1_1-x64.dll
+    bin/libssl-1_1-x64.dll
+    include/openssl/*.h
+    lib/VC/*.lib
+from the OpenSSL-Win64 installation directory into the openssl/ directory''')
+    elif sys.platform == 'win32' and platform.architecture()[0] == '32bit':
+        print('''
+Build not possible! Please insert the files
+    bin/libcrypto-1_1-x86.dll
+    bin/libssl-1_1-x86.dll
+    include/openssl/*.h
+    lib/VC/*.lib
+from the OpenSSL-Win32 installation directory into the openssl/ directory''')
 finally:
     if sys.platform == 'win32':
-        for lib in LIB_NAMES:
-            os.remove('sslpsk/%s.dll'%lib)
+        for lib in DLL_NAMES:
+            os.remove('sslpsk2/%s.dll' % lib)
