@@ -18,10 +18,10 @@ import os, shutil, sys, platform
 
 if sys.platform == 'win32' and platform.architecture()[0] == '64bit':
     LIB_NAMES = ['libssl64MD', 'libcrypto64MD']
-    DLL_NAMES = ['libcrypto-1_1-x64', 'libssl-1_1-x64']
+    DLL_NAMES = ['libcrypto-3-x64', 'libssl-3-x64']
 elif sys.platform == 'win32' and platform.architecture()[0] == '32bit':
     LIB_NAMES = ['libssl32MD', 'libcrypto32MD']
-    DLL_NAMES = ['libcrypto-1_1', 'libssl-1_1']
+    DLL_NAMES = ['libcrypto-3', 'libssl-3']
 else:
     LIB_NAMES = ['ssl']
     DLL_NAMES = []
@@ -41,7 +41,7 @@ try:
 
     setup(
         name='sslpsk2',
-        version='1.0.1',
+        version='1.0.2',
         description='Adds TLS-PSK support to the Python ssl package',
         author='Sidney Kuyateh',
         author_email='sidneyjohn23@kuyateh.eu',
@@ -62,6 +62,7 @@ try:
             'Programming Language :: Python :: 3.7',
             'Programming Language :: Python :: 3.8',
             'Programming Language :: Python :: 3.9',
+            'Programming Language :: Python :: 3.10',
             'Programming Language :: Python :: Implementation :: CPython',
             'Operating System :: POSIX',
             'Operating System :: Unix',
