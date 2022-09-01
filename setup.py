@@ -26,8 +26,8 @@ else:
     LIB_NAMES = ['ssl']
     DLL_NAMES = []
 
-_sslpsk2 = Extension('sslpsk2._sslpsk2',
-                    sources=['sslpsk2/_sslpsk2.c'],
+_sslpsk3 = Extension('sslpsk3._sslpsk3',
+                    sources=['sslpsk3/_sslpsk3.c'],
                     libraries=LIB_NAMES,
                     include_dirs=['openssl/include/'],
                     library_dirs=['openssl/lib/VC/']
@@ -37,16 +37,16 @@ try:
     # Symlink the libs so they can be included in the package data
     if sys.platform == 'win32':
         for lib in DLL_NAMES:
-            shutil.copy2('openssl/bin/%s.dll' % lib, 'sslpsk2/')
+            shutil.copy2('openssl/bin/%s.dll' % lib, 'sslpsk3/')
 
     setup(
-        name='sslpsk2',
-        version='1.0.2',
+        name='sslpsk3',
+        version='1.0.0',
         description='Adds TLS-PSK support to the Python ssl package',
         author='Sidney Kuyateh',
         author_email='sidneyjohn23@kuyateh.eu',
         license="Apache 2.0",
-        url='https://github.com/autinerd/sslpsk2',
+        url='https://github.com/autinerd/sslpsk3',
         keywords=['ssl', 'tls', 'psk', 'tls-psk', 'preshared key'],
         classifiers=[
             'Development Status :: 5 - Production/Stable',
@@ -69,10 +69,10 @@ try:
             'Operating System :: MacOS',
             'Operating System :: Microsoft'
         ],
-        packages=['sslpsk2', 'sslpsk2.test'],
-        ext_modules=[_sslpsk2],
+        packages=['sslpsk3', 'sslpsk3.test'],
+        ext_modules=[_sslpsk3],
         package_data={'': ['%s.dll' % lib for lib in DLL_NAMES]},
-        test_suite='sslpsk2.test',
+        test_suite='sslpsk3.test',
         zip_safe=False
     )
 except OSError:
@@ -95,4 +95,4 @@ from the OpenSSL-Win32 installation directory into the openssl/ directory''')
 finally:
     if sys.platform == 'win32':
         for lib in DLL_NAMES:
-            os.remove('sslpsk2/%s.dll' % lib)
+            os.remove('sslpsk3/%s.dll' % lib)

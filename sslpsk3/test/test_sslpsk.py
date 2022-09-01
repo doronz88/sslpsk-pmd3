@@ -15,7 +15,7 @@
 import os
 import socket
 import ssl
-import sslpsk2
+import sslpsk3
 import sys
 import threading
 import unittest
@@ -24,7 +24,7 @@ HOST='localhost'
 PORT=6000
 TEST_DATA=b'abcdefghi'
 
-class sslpsk2Test(unittest.TestCase):
+class sslpsk3Test(unittest.TestCase):
     # ---------- setup/tear down functions
     def setUp(self):
         self.psk = b'c033f52671c61c8128f7f8a40be88038bcf2b07a6eb3095c36e3759f0cf40837'
@@ -63,7 +63,7 @@ class sslpsk2Test(unittest.TestCase):
             self.server_socket, _ = self.accept_socket.accept()
         
             # wrap socket with TLS-PSK
-            self.server_psk_sock = sslpsk2.wrap_socket(self.server_socket, psk=self.psk, ciphers='PSK-AES256-CBC-SHA',
+            self.server_psk_sock = sslpsk3.wrap_socket(self.server_socket, psk=self.psk, ciphers='PSK-AES256-CBC-SHA',
                                                       ssl_version=ssl.PROTOCOL_TLSv1, server_side=True)
         
             # accept data from client
@@ -77,7 +77,7 @@ class sslpsk2Test(unittest.TestCase):
         self.client_socket.connect(self.addr)
         
         # wrap socket with TLS-PSK
-        self.client_psk_sock = sslpsk2.wrap_socket(self.client_socket, psk=self.psk, ciphers='PSK-AES256-CBC-SHA',
+        self.client_psk_sock = sslpsk3.wrap_socket(self.client_socket, psk=self.psk, ciphers='PSK-AES256-CBC-SHA',
                                                   ssl_version=ssl.PROTOCOL_TLSv1, server_side=False)
         
         self.client_psk_sock.sendall(TEST_DATA)

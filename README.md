@@ -1,11 +1,11 @@
-# sslpsk2
+# sslpsk3
 
-[![PyPI version](https://badge.fury.io/py/sslpsk2.svg)](https://badge.fury.io/py/sslpsk2)
+[![PyPI version](https://badge.fury.io/py/sslpsk3.svg)](https://badge.fury.io/py/sslpsk3)
 
 This module adds TLS-PSK support to the Python 2.7 and 3.x `ssl`
 package. Simply use
 
-    sslpsk2.wrap_socket(sock, psk=b'...', ...)
+    sslpsk3.wrap_socket(sock, psk=b'...', ...)
 
 instead of
 
@@ -13,7 +13,7 @@ instead of
 
 ## Installation
 
-```pip install sslpsk2```
+```pip install sslpsk3```
 
 `pip` builds from source for Linux and Mac OSX, so a C compiler, the Python
 development headers, and the openSSL development headers are required.  For
@@ -22,7 +22,7 @@ prerequisites.
 
 ## Usage
 
-`sslpsk2.wrap_socket(...)` is a drop-in replacement for `ssl.wrap_socket(...)` that
+`sslpsk3.wrap_socket(...)` is a drop-in replacement for `ssl.wrap_socket(...)` that
 supports two additional arguments, `psk` and `hint`.
 
 `psk` sets the preshared key and, optionally, the identity for a client
@@ -34,13 +34,13 @@ For client connections, `psk` can be one of four things:
 1. Just the preshared key.
 
 ```python
-sslpsk2.wrap_socket(sock, psk=b'mypsk')
+sslpsk3.wrap_socket(sock, psk=b'mypsk')
 ```
 
 2. A tuple of the preshared key and client identity.
 
 ```python
-sslpsk2.wrap_socket(sock, psk=(b'mypsk', b'myidentity'))
+sslpsk3.wrap_socket(sock, psk=(b'mypsk', b'myidentity'))
 ```
 
 3. A function mapping the server identity hint to the preshared key.
@@ -49,7 +49,7 @@ sslpsk2.wrap_socket(sock, psk=(b'mypsk', b'myidentity'))
 PSK_FOR = {b'server1' : b'abcdef',
            b'server2' : b'123456'}
 
-sslpsk2.wrap_socket(sock, psk=lambda hint: PSK_FOR[hint])
+sslpsk3.wrap_socket(sock, psk=lambda hint: PSK_FOR[hint])
 ```
 
 4. A function mapping the server identity hint to a tuple of the preshared key
@@ -62,7 +62,7 @@ PSK_FOR = {b'server1' : b'abcdef',
 ID_FOR  = {b'server1' : b'clientA',
            b'server2' : b'clientB'}
 
-sslpsk2.wrap_socket(sock, psk=lambda hint: (PSK_FOR[hint], ID_FOR[hint]))
+sslpsk3.wrap_socket(sock, psk=lambda hint: (PSK_FOR[hint], ID_FOR[hint]))
 ```
 
 For server connections, `psk` can be one of two things:
@@ -70,7 +70,7 @@ For server connections, `psk` can be one of two things:
 1. Just the preshared key.
 
 ```python
-sslpsk2.wrap_socket(sock, server_side=True, psk=b'mypsk')
+sslpsk3.wrap_socket(sock, server_side=True, psk=b'mypsk')
 ```
 
 2. A function mapping the client identity to the preshared key.
@@ -79,14 +79,14 @@ sslpsk2.wrap_socket(sock, server_side=True, psk=b'mypsk')
 PSK_FOR = {b'clientA' : b'abcdef',
            b'clientB' : b'123456'}
 
-sslpsk2.wrap_socket(sock, server_side=True, psk=lambda identity: PSK_FOR[identity])
+sslpsk3.wrap_socket(sock, server_side=True, psk=lambda identity: PSK_FOR[identity])
 ```
 
 Additionally for server connections, the optional server identity hint is
 specified using the  `hint` argument.
 
 ```python
-sslpsk2.wrap_socket(sock, server_side=True, hint=b'myidentity', psk=b'mypsk')
+sslpsk3.wrap_socket(sock, server_side=True, hint=b'myidentity', psk=b'mypsk')
 ```
 
 If `hint` is not specified, `None`, or the empty string, the identity hint
@@ -98,7 +98,7 @@ will not be sent to the client.
 from __future__ import print_function
 import socket
 import ssl
-import sslpsk2
+import sslpsk3
 
 PSKS = {'client1' : 'abcdef',
         'client2' : '123456'}
@@ -110,7 +110,7 @@ def server(host, port):
     tcp_sock.listen(1)
 
     sock, _ = tcp_sock.accept()
-    ssl_sock = sslpsk2.wrap_socket(sock,
+    ssl_sock = sslpsk3.wrap_socket(sock,
                                   server_side = True,
                                   ssl_version=ssl.PROTOCOL_TLSv1,
                                   ciphers='ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH',
@@ -140,7 +140,7 @@ if __name__ == '__main__':
 from __future__ import print_function
 import socket
 import ssl
-import sslpsk2
+import sslpsk3
 
 PSKS = {b'server1' : b'abcdef',
         b'server2' : b'uvwxyz'}
@@ -149,7 +149,7 @@ def client(host, port, psk):
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp_socket.connect((host, port))
 
-    ssl_sock = sslpsk2.wrap_socket(tcp_socket,
+    ssl_sock = sslpsk3.wrap_socket(tcp_socket,
                                   ssl_version=ssl.PROTOCOL_TLSv1,
                                   ciphers='ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH',
                                   psk=lambda hint: (PSKS[hint], b'client1'))

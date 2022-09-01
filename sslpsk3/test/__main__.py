@@ -12,6 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License
 
-from __future__ import absolute_import
+import sslpsk3.test
 
-from sslpsk2.sslpsk2 import wrap_socket
+sslpsk3.test.run()
