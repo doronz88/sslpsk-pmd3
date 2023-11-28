@@ -71,7 +71,7 @@ long ssl_id(SSL* ssl)
 /*
  * Called from Python to set python_psk_client_callback;
  */
-PyObject* sslpsk3_set_python_psk_client_callback(PyObject* self, PyObject* args)
+PyObject* sslpsk_set_python_psk_client_callback(PyObject* self, PyObject* args)
 {
     PyObject* cb;
     if (!PyArg_ParseTuple(args, "O", &cb)) {
@@ -87,7 +87,7 @@ PyObject* sslpsk3_set_python_psk_client_callback(PyObject* self, PyObject* args)
 /*
  * Called from Python to set python_psk_server_callback;
  */
-PyObject* sslpsk3_set_python_psk_server_callback(PyObject* self, PyObject* args)
+PyObject* sslpsk_set_python_psk_server_callback(PyObject* self, PyObject* args)
 {
     PyObject* cb;
     if (!PyArg_ParseTuple(args, "O", &cb)) {
@@ -103,7 +103,7 @@ PyObject* sslpsk3_set_python_psk_server_callback(PyObject* self, PyObject* args)
 /*
  * Client callback for openSSL. Delegates to python_psk_client_callback.
  */
-static unsigned int sslpsk3_psk_client_callback(SSL* ssl,
+static unsigned int sslpsk_psk_client_callback(SSL* ssl,
                                                const char* hint,
                                                char* identity,
                                                unsigned int max_identity_len,
@@ -166,7 +166,7 @@ static unsigned int sslpsk3_psk_client_callback(SSL* ssl,
 /*
  * Server callback for openSSL. Delegates to python_psk_server_callback.
  */
-static unsigned int sslpsk3_psk_server_callback(SSL* ssl,
+static unsigned int sslpsk_psk_server_callback(SSL* ssl,
                                                const char* identity,
                                                unsigned char* psk,
                                                unsigned int max_psk_len)
@@ -217,7 +217,7 @@ static unsigned int sslpsk3_psk_server_callback(SSL* ssl,
 /*
  * Called from Python to set the client psk callback.
  */
-PyObject* sslpsk3_set_psk_client_callback(PyObject* self, PyObject* args)
+PyObject* sslpsk_set_psk_client_callback(PyObject* self, PyObject* args)
 {
     PyObject* socket;
     SSL* ssl;
@@ -228,7 +228,7 @@ PyObject* sslpsk3_set_psk_client_callback(PyObject* self, PyObject* args)
     }
 
     ssl = ((PySSLSocket*) socket)->ssl;
-    SSL_set_psk_client_callback(ssl, sslpsk3_psk_client_callback);
+    SSL_set_psk_client_callback(ssl, sslpsk_psk_client_callback);
 
     return Py_BuildValue("l", ssl_id(ssl));
 }
@@ -236,7 +236,7 @@ PyObject* sslpsk3_set_psk_client_callback(PyObject* self, PyObject* args)
 /*
  * Called from Python to set the server psk callback.
  */
-PyObject* sslpsk3_set_psk_server_callback(PyObject* self, PyObject* args)
+PyObject* sslpsk_set_psk_server_callback(PyObject* self, PyObject* args)
 {
     PyObject* socket;
     SSL* ssl;
@@ -247,7 +247,7 @@ PyObject* sslpsk3_set_psk_server_callback(PyObject* self, PyObject* args)
     }
 
     ssl = ((PySSLSocket*) socket)->ssl;
-    SSL_set_psk_server_callback(ssl, sslpsk3_psk_server_callback);
+    SSL_set_psk_server_callback(ssl, sslpsk_psk_server_callback);
 
     return Py_BuildValue("l", ssl_id(ssl));
 }
@@ -255,7 +255,7 @@ PyObject* sslpsk3_set_psk_server_callback(PyObject* self, PyObject* args)
 /*
  * Called from Python to set the server identity hint.
  */
-PyObject* sslpsk3_use_psk_identity_hint(PyObject* self, PyObject* args)
+PyObject* sslpsk_use_psk_identity_hint(PyObject* self, PyObject* args)
 {
     PyObject* socket;
     const char *hint;
@@ -275,7 +275,7 @@ PyObject* sslpsk3_use_psk_identity_hint(PyObject* self, PyObject* args)
 /*
  * Called from Python to place the socket into server mode
  */
-PyObject* sslpsk3_set_accept_state(PyObject* self, PyObject* args)
+PyObject* sslpsk_set_accept_state(PyObject* self, PyObject* args)
 {
     PyObject* socket;
     SSL* ssl;
@@ -291,24 +291,24 @@ PyObject* sslpsk3_set_accept_state(PyObject* self, PyObject* args)
     return Py_BuildValue("l", ssl_id(ssl));
 }
 
-static PyMethodDef sslpsk3_methods[] =
+static PyMethodDef sslpsk_methods[] =
 {
-    {"sslpsk3_set_python_psk_client_callback", sslpsk3_set_python_psk_client_callback, METH_VARARGS, ""},
-    {"sslpsk3_set_python_psk_server_callback", sslpsk3_set_python_psk_server_callback, METH_VARARGS, ""},
-    {"sslpsk3_set_psk_client_callback", sslpsk3_set_psk_client_callback, METH_VARARGS, ""},
-    {"sslpsk3_set_psk_server_callback", sslpsk3_set_psk_server_callback, METH_VARARGS, ""},
-    {"sslpsk3_use_psk_identity_hint", sslpsk3_use_psk_identity_hint, METH_VARARGS, ""},
-    {"sslpsk3_set_accept_state", sslpsk3_set_accept_state, METH_VARARGS, ""},
+    {"sslpsk_set_python_psk_client_callback", sslpsk_set_python_psk_client_callback, METH_VARARGS, ""},
+    {"sslpsk_set_python_psk_server_callback", sslpsk_set_python_psk_server_callback, METH_VARARGS, ""},
+    {"sslpsk_set_psk_client_callback", sslpsk_set_psk_client_callback, METH_VARARGS, ""},
+    {"sslpsk_set_psk_server_callback", sslpsk_set_psk_server_callback, METH_VARARGS, ""},
+    {"sslpsk_use_psk_identity_hint", sslpsk_use_psk_identity_hint, METH_VARARGS, ""},
+    {"sslpsk_set_accept_state", sslpsk_set_accept_state, METH_VARARGS, ""},
     {NULL, NULL, 0, NULL}
 };
 
 #if PY_MAJOR_VERSION >= 3
-static struct PyModuleDef sslpsk3_moduledef = {
+static struct PyModuleDef sslpsk_moduledef = {
     PyModuleDef_HEAD_INIT,
-    "sslpsk3",
+    "sslpsk",
     NULL,
     0,
-    sslpsk3_methods,
+    sslpsk_methods,
     NULL,
     NULL,
     NULL,
@@ -317,15 +317,15 @@ static struct PyModuleDef sslpsk3_moduledef = {
 #endif
 
 #if PY_MAJOR_VERSION >= 3
-PyMODINIT_FUNC PyInit__sslpsk3(void)
+PyMODINIT_FUNC PyInit__sslpsk(void)
 #else
-void init_sslpsk3(void)
+void init_sslpsk(void)
 #endif
 {
 #if PY_MAJOR_VERSION >= 3
-    PyObject* m = PyModule_Create(&sslpsk3_moduledef);
+    PyObject* m = PyModule_Create(&sslpsk_moduledef);
 #else
-    PyObject* m = Py_InitModule("_sslpsk3", sslpsk3_methods);
+    PyObject* m = Py_InitModule("_sslpsk", sslpsk_methods);
 #endif
 
     if (m == NULL) {

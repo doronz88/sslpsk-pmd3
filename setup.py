@@ -12,87 +12,16 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License
 
-from setuptools import setup, Extension
+import sys
 
-import os, shutil, sys, platform
+from setuptools import Extension, setup
 
-if sys.platform == 'win32' and platform.architecture()[0] == '64bit':
-    LIB_NAMES = ['libssl64MD', 'libcrypto64MD']
-    DLL_NAMES = ['libcrypto-3-x64', 'libssl-3-x64']
-elif sys.platform == 'win32' and platform.architecture()[0] == '32bit':
-    LIB_NAMES = ['libssl32MD', 'libcrypto32MD']
-    DLL_NAMES = ['libcrypto-3', 'libssl-3']
+if sys.platform == 'win32':
+    libraries = ['libcrypto', 'libssl']
 else:
-    LIB_NAMES = ['ssl']
-    DLL_NAMES = []
+    libraries = ['crypto']
 
-_sslpsk3 = Extension('sslpsk3._sslpsk3',
-                    sources=['sslpsk3/_sslpsk3.c'],
-                    libraries=LIB_NAMES,
-                    include_dirs=['openssl/include/'],
-                    library_dirs=['openssl/lib/VC/']
-                    )
-
-try:
-    # Symlink the libs so they can be included in the package data
-    if sys.platform == 'win32':
-        for lib in DLL_NAMES:
-            shutil.copy2('openssl/bin/%s.dll' % lib, 'sslpsk3/')
-
-    setup(
-        name='sslpsk3',
-        version='1.0.0',
-        description='Adds TLS-PSK support to the Python ssl package',
-        author='Sidney Kuyateh',
-        author_email='sidneyjohn23@kuyateh.eu',
-        license="Apache 2.0",
-        url='https://github.com/autinerd/sslpsk3',
-        keywords=['ssl', 'tls', 'psk', 'tls-psk', 'preshared key'],
-        classifiers=[
-            'Development Status :: 5 - Production/Stable',
-            'Intended Audience :: Developers',
-            'License :: OSI Approved :: Apache Software License',
-            'Programming Language :: Python',
-            'Programming Language :: Python :: 2',
-            'Programming Language :: Python :: 2.7',
-            'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.4',
-            'Programming Language :: Python :: 3.5',
-            'Programming Language :: Python :: 3.6',
-            'Programming Language :: Python :: 3.7',
-            'Programming Language :: Python :: 3.8',
-            'Programming Language :: Python :: 3.9',
-            'Programming Language :: Python :: 3.10',
-            'Programming Language :: Python :: Implementation :: CPython',
-            'Operating System :: POSIX',
-            'Operating System :: Unix',
-            'Operating System :: MacOS',
-            'Operating System :: Microsoft'
-        ],
-        packages=['sslpsk3', 'sslpsk3.test'],
-        ext_modules=[_sslpsk3],
-        package_data={'': ['%s.dll' % lib for lib in DLL_NAMES]},
-        test_suite='sslpsk3.test',
-        zip_safe=False
-    )
-except OSError:
-    if sys.platform == 'win32' and platform.architecture()[0] == '64bit':
-        print('''
-Build not possible! Please insert the files
-    bin/libcrypto-1_1-x64.dll
-    bin/libssl-1_1-x64.dll
-    include/openssl/*.h
-    lib/VC/*.lib
-from the OpenSSL-Win64 installation directory into the openssl/ directory''')
-    elif sys.platform == 'win32' and platform.architecture()[0] == '32bit':
-        print('''
-Build not possible! Please insert the files
-    bin/libcrypto-1_1-x86.dll
-    bin/libssl-1_1-x86.dll
-    include/openssl/*.h
-    lib/VC/*.lib
-from the OpenSSL-Win32 installation directory into the openssl/ directory''')
-finally:
-    if sys.platform == 'win32':
-        for lib in DLL_NAMES:
-            os.remove('sslpsk3/%s.dll' % lib)
+setup(name='pytun-pmd3', ext_modules=[
+    Extension('sslpsk_pmd3._sslpsk',
+              ['sslpsk_pmd3/_sslpsk.c'],
+              libraries=libraries)])

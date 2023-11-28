@@ -2,6 +2,7 @@ build/
 dist/
 openssl*/
 appveyor/
+.idea
 .vscode/
 
 *.pyc
