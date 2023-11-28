@@ -12,6 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License
 
-import sslpsk3.test
+import sslpsk_pmd3.test
 
-sslpsk3.test.run()
+sslpsk_pmd3.test.run()

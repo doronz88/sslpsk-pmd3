@@ -19,7 +19,7 @@ import weakref
 
 import _ssl
 
-from sslpsk3 import _sslpsk3
+from sslpsk_pmd3 import _sslpsk
 
 _callbacks = {}
 
@@ -40,7 +40,7 @@ def _unregister_callback(ref):
 
 
 def _python_psk_client_callback(ssl_id, hint):
-    """Called by _sslpsk3.c to return the (psk, identity) tuple for the socket with
+    """Called by _sslpsk.c to return the (psk, identity) tuple for the socket with
     the specified ssl socket.
 
     """
@@ -64,7 +64,7 @@ def _sslobj(sock):
 
 
 def _python_psk_server_callback(ssl_id, identity):
-    """Called by _sslpsk3.c to return the psk for the socket with the specified
+    """Called by _sslpsk.c to return the psk for the socket with the specified
     ssl socket.
 
     """
@@ -74,19 +74,19 @@ def _python_psk_server_callback(ssl_id, identity):
         return _callbacks[ssl_id](identity)
 
 
-_sslpsk3.sslpsk3_set_python_psk_client_callback(_python_psk_client_callback)
-_sslpsk3.sslpsk3_set_python_psk_server_callback(_python_psk_server_callback)
+_sslpsk.sslpsk_set_python_psk_client_callback(_python_psk_client_callback)
+_sslpsk.sslpsk_set_python_psk_server_callback(_python_psk_server_callback)
 
 
 def _ssl_set_psk_client_callback(sock, psk_cb):
-    ssl_id = _sslpsk3.sslpsk3_set_psk_client_callback(_sslobj(sock))
+    ssl_id = _sslpsk.sslpsk_set_psk_client_callback(_sslobj(sock))
     _register_callback(sock, ssl_id, psk_cb)
 
 
 def _ssl_set_psk_server_callback(sock, psk_cb, hint):
-    ssl_id = _sslpsk3.sslpsk3_set_accept_state(_sslobj(sock))
-    _ = _sslpsk3.sslpsk3_set_psk_server_callback(_sslobj(sock))
-    _ = _sslpsk3.sslpsk3_use_psk_identity_hint(_sslobj(sock), hint if hint else b"")
+    ssl_id = _sslpsk.sslpsk_set_accept_state(_sslobj(sock))
+    _ = _sslpsk.sslpsk_set_psk_server_callback(_sslobj(sock))
+    _ = _sslpsk.sslpsk_use_psk_identity_hint(_sslobj(sock), hint if hint else b"")
     _register_callback(sock, ssl_id, psk_cb)
 
 
