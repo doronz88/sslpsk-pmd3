@@ -15,10 +15,11 @@
 import os
 import socket
 import ssl
-import sslpsk3
 import sys
 import threading
 import unittest
+
+import sslpsk3
 
 HOST='localhost'
 PORT=6000

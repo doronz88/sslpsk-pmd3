@@ -12,9 +12,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License
 
-from setuptools import setup, Extension
+import os
+import platform
+import shutil
+import sys
 
-import os, shutil, sys, platform
+from setuptools import Extension, setup
 
 if sys.platform == 'win32' and platform.architecture()[0] == '64bit':
     LIB_NAMES = ['libssl64MD', 'libcrypto64MD']
@@ -27,11 +30,11 @@ else:
     DLL_NAMES = []
 
 _sslpsk3 = Extension('sslpsk3._sslpsk3',
-                    sources=['sslpsk3/_sslpsk3.c'],
-                    libraries=LIB_NAMES,
-                    include_dirs=['openssl/include/'],
-                    library_dirs=['openssl/lib/VC/']
-                    )
+                     sources=['sslpsk3/_sslpsk3.c'],
+                     libraries=LIB_NAMES,
+                     include_dirs=['openssl/include/'],
+                     library_dirs=['openssl/lib/VC/']
+                     )
 
 try:
     # Symlink the libs so they can be included in the package data

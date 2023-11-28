@@ -1,6 +1,8 @@
 from __future__ import print_function
+
 import socket
 import ssl
+
 import sslpsk3
 
 PSKS = {'client1' : b'abcdef',
