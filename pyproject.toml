@@ -1,6 +1,6 @@
 [project]
 name = "sslpsk-pmd3"
-version = "1.0.1"
+version = "1.0.2"
 description = "sslpsk fork for pymobiledevice3"
 readme = "README.md"
 requires-python = ">=3.8"
