@@ -19,7 +19,7 @@ from setuptools import Extension, setup
 if sys.platform == 'win32':
     libraries = ['libcrypto', 'libssl']
 else:
-    libraries = ['crypto']
+    libraries = ['crypto', 'ssl']
 
 setup(name='pytun-pmd3', ext_modules=[
     Extension('sslpsk_pmd3._sslpsk',
