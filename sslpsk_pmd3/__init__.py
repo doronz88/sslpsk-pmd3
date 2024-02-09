@@ -12,4 +12,4 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License
 
-from sslpsk_pmd3.sslpsk import wrap_socket, SSLPSKContext
+from sslpsk_pmd3.sslpsk import SSLPSKContext, wrap_socket
