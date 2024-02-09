@@ -4,6 +4,7 @@ openssl*/
 appveyor/
 .idea
 .vscode/
+sslpsk_pmd3/_version.py
 
 *.pyc
 *.so
