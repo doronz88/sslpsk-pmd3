@@ -19,7 +19,7 @@ from setuptools import Extension, setup
 if sys.platform == 'win32':
     libraries = ['libcrypto', 'libssl']
 else:
-    libraries = ['crypto','ssl']
+    libraries = ['crypto', 'ssl']
 
 extension_openssl1 = Extension(
     "sslpsk_pmd3._sslpsk_openssl1",
