@@ -71,7 +71,7 @@ long ssl_id(SSL* ssl)
 /*
  * Called from Python to set python_psk_client_callback;
  */
-PyObject* sslpsk_set_python_psk_client_callback(PyObject* self, PyObject* args)
+static PyObject* sslpsk_set_python_psk_client_callback(PyObject* self, PyObject* args)
 {
     PyObject* cb;
     if (!PyArg_ParseTuple(args, "O", &cb)) {
@@ -87,7 +87,7 @@ PyObject* sslpsk_set_python_psk_client_callback(PyObject* self, PyObject* args)
 /*
  * Called from Python to set python_psk_server_callback;
  */
-PyObject* sslpsk_set_python_psk_server_callback(PyObject* self, PyObject* args)
+static PyObject* sslpsk_set_python_psk_server_callback(PyObject* self, PyObject* args)
 {
     PyObject* cb;
     if (!PyArg_ParseTuple(args, "O", &cb)) {
@@ -217,7 +217,7 @@ static unsigned int sslpsk_psk_server_callback(SSL* ssl,
 /*
  * Called from Python to set the client psk callback.
  */
-PyObject* sslpsk_set_psk_client_callback(PyObject* self, PyObject* args)
+static PyObject* sslpsk_set_psk_client_callback(PyObject* self, PyObject* args)
 {
     PyObject* socket;
     SSL* ssl;
@@ -236,7 +236,7 @@ PyObject* sslpsk_set_psk_client_callback(PyObject* self, PyObject* args)
 /*
  * Called from Python to set the server psk callback.
  */
-PyObject* sslpsk_set_psk_server_callback(PyObject* self, PyObject* args)
+static PyObject* sslpsk_set_psk_server_callback(PyObject* self, PyObject* args)
 {
     PyObject* socket;
     SSL* ssl;
@@ -255,7 +255,7 @@ PyObject* sslpsk_set_psk_server_callback(PyObject* self, PyObject* args)
 /*
  * Called from Python to set the server identity hint.
  */
-PyObject* sslpsk_use_psk_identity_hint(PyObject* self, PyObject* args)
+static PyObject* sslpsk_use_psk_identity_hint(PyObject* self, PyObject* args)
 {
     PyObject* socket;
     const char *hint;
@@ -275,7 +275,7 @@ PyObject* sslpsk_use_psk_identity_hint(PyObject* self, PyObject* args)
 /*
  * Called from Python to place the socket into server mode
  */
-PyObject* sslpsk_set_accept_state(PyObject* self, PyObject* args)
+static PyObject* sslpsk_set_accept_state(PyObject* self, PyObject* args)
 {
     PyObject* socket;
     SSL* ssl;
@@ -302,10 +302,13 @@ static PyMethodDef sslpsk_methods[] =
     {NULL, NULL, 0, NULL}
 };
 
+#define STRINGIFY(x) #x
+#define STRINGIFY_MACRO(x) STRINGIFY(x)
+
 #if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef sslpsk_moduledef = {
     PyModuleDef_HEAD_INIT,
-    "sslpsk",
+    "sslpsk_" STRINGIFY_MACRO(OPENSSL_VER),
     NULL,
     0,
     sslpsk_methods,
@@ -317,15 +320,15 @@ static struct PyModuleDef sslpsk_moduledef = {
 #endif
 
 #if PY_MAJOR_VERSION >= 3
-PyMODINIT_FUNC PyInit__sslpsk(void)
+PyMODINIT_FUNC PYINIT_SSLPSK_OPENSSL(void)
 #else
-void init_sslpsk(void)
+void INIT_SSLPSK_OPENSSL(void)
 #endif
 {
 #if PY_MAJOR_VERSION >= 3
     PyObject* m = PyModule_Create(&sslpsk_moduledef);
 #else
-    PyObject* m = Py_InitModule("_sslpsk", sslpsk_methods);
+    PyObject* m = Py_InitModule("_sslpsk_" STRINGIFY_MACRO(OPENSSL_VER), sslpsk_methods);
 #endif
 
     if (m == NULL) {

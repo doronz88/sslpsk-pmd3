@@ -19,9 +19,32 @@ from setuptools import Extension, setup
 if sys.platform == 'win32':
     libraries = ['libcrypto', 'libssl']
 else:
-    libraries = ['crypto', 'ssl']
+    libraries = ['crypto','ssl']
 
-setup(name='pytun-pmd3', ext_modules=[
-    Extension('sslpsk_pmd3._sslpsk',
-              ['sslpsk_pmd3/_sslpsk.c'],
-              libraries=libraries)])
+extension_openssl1 = Extension(
+    "sslpsk_pmd3._sslpsk_openssl1",
+    sources=["sslpsk_pmd3/_sslpsk.c"],
+    libraries=libraries,
+    include_dirs=["openssl1/include/"],
+    library_dirs=["openssl1/lib/VC/"],
+    define_macros=[
+        ("OPENSSL_VER", "openssl1"),
+        ("INIT_SSLPSK_OPENSSL", "init_sslpsk_openssl1"),
+        ("PYINIT_SSLPSK_OPENSSL", "PyInit__sslpsk_openssl1"),
+    ],
+)
+
+extension_openssl3 = Extension(
+    "sslpsk_pmd3._sslpsk_openssl3",
+    sources=["sslpsk_pmd3/_sslpsk.c"],
+    libraries=libraries,
+    include_dirs=["openssl3/include/"],
+    library_dirs=["openssl3/lib/VC/"],
+    define_macros=[
+        ("OPENSSL_VER", "openssl3"),
+        ("INIT_SSLPSK_OPENSSL", "init_sslpsk_openssl3"),
+        ("PYINIT_SSLPSK_OPENSSL", "PyInit__sslpsk_openssl3"),
+    ],
+)
+
+setup(name='pytun-pmd3', ext_modules=[extension_openssl1, extension_openssl3])
