@@ -61,6 +61,10 @@ class sslpsk3Test(unittest.TestCase):
         self.server_psk_sock = None
 
     def startServer(self):
+        # OpenSSL 1.1.1 on Windows ARM64 (CPython 3.9/3.10) races when two threads create
+        # their first SSL_CTX concurrently ("malloc failure"); initialize it here first.
+        ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
         self.accept_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.accept_socket.bind(self.addr)
         self.accept_socket.listen(1)
