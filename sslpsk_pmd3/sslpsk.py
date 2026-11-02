@@ -34,21 +34,19 @@ def _ensure_bound():
             _bound = True
 
 
+# ssl_id (the SSL* address) -> (callback, weakref to the owning socket/object)
 _callbacks = {}
 
 
-class FinalizerRef(weakref.ref):
-    """subclass weakref.ref so that attributes can be added"""
-
-
 def _register_callback(sock, ssl_id, callback):
-    _callbacks[ssl_id] = callback
-    callback.unregister = FinalizerRef(sock, _unregister_callback)
-    callback.unregister.ssl_id = ssl_id
+    def unregister(ref):
+        # SSL* addresses are reused once an SSL is freed (on close()), possibly before this
+        # socket object is collected; only remove the entry if it is still ours.
+        entry = _callbacks.get(ssl_id)
+        if entry is not None and entry[1] is ref:
+            del _callbacks[ssl_id]
 
-
-def _unregister_callback(ref):
-    del _callbacks[ref.ssl_id]
+    _callbacks[ssl_id] = (callback, weakref.ref(sock, unregister))
 
 
 def _python_psk_client_callback(ssl_id, hint):
@@ -56,11 +54,11 @@ def _python_psk_client_callback(ssl_id, hint):
     the specified ssl socket.
 
     """
-    if ssl_id not in _callbacks:
+    entry = _callbacks.get(ssl_id)
+    if entry is None:
         return (b"", b"")
-    else:
-        res = _callbacks[ssl_id](hint)
-        return res if isinstance(res, tuple) else (res, b"")
+    res = entry[0](hint)
+    return res if isinstance(res, tuple) else (res, b"")
 
 
 def _sslobj(sock):
@@ -79,10 +77,10 @@ def _python_psk_server_callback(ssl_id, identity):
     ssl socket.
 
     """
-    if ssl_id not in _callbacks:
+    entry = _callbacks.get(ssl_id)
+    if entry is None:
         return b""
-    else:
-        return _callbacks[ssl_id](identity)
+    return entry[0](identity)
 
 
 _sslpsk.sslpsk_set_python_psk_client_callback(_python_psk_client_callback)
@@ -102,13 +100,45 @@ def _ssl_set_psk_server_callback(sock, psk_cb, hint):
     _ = _sslpsk.sslpsk_use_psk_identity_hint(_sslobj(sock), hint if hint else b"")
     _register_callback(sock, ssl_id, psk_cb)
 
+
+def _decode_peer_string(value):
+    # Mirrors CPython 3.13: an absent or empty hint/identity is None
+    return value.decode("utf-8") if value else None
+
+
+def _native_client_callback(callback):
+    def adapter(hint):
+        identity, psk = callback(_decode_peer_string(hint))
+        return psk, identity.encode("utf-8") if identity is not None else b""
+
+    return adapter
+
+
+def _native_server_callback(callback):
+    return lambda identity: callback(_decode_peer_string(identity))
+
+
 def _ssl_setup_psk_callbacks(sslobj):
     # do_handshake() is re-entered after every WANT_READ/WANT_WRITE on non-blocking sockets
     if getattr(sslobj, "_sslpsk_configured", False):
         return
     sslobj._sslpsk_configured = True
-    psk = sslobj.context.psk
-    hint = sslobj.context.hint
+    context = sslobj.context
+    if sslobj.server_side:
+        server_callback = getattr(context, "_sslpsk_server_callback", None)
+        if server_callback is not None:
+            hint = context._sslpsk_identity_hint
+            _ssl_set_psk_server_callback(
+                sslobj, _native_server_callback(server_callback), hint.encode("utf-8") if hint else b""
+            )
+            return
+    else:
+        client_callback = getattr(context, "_sslpsk_client_callback", None)
+        if client_callback is not None:
+            _ssl_set_psk_client_callback(sslobj, _native_client_callback(client_callback))
+            return
+    psk = context.psk
+    hint = context.hint
     if psk:
         if sslobj.server_side:
             cb = psk if callable(psk) else lambda _identity: psk
@@ -119,6 +149,15 @@ def _ssl_setup_psk_callbacks(sslobj):
 
 
 class SSLPSKContext(ssl.SSLContext):
+    """``ssl.SSLContext`` with TLS-PSK support.
+
+    Two interfaces are available:
+
+    * ``set_psk_client_callback()``/``set_psk_server_callback()``, identical to Python 3.13+
+      (where the native implementation is used) and provided here for older versions.
+    * The original ``psk``/``hint`` attributes.
+    """
+
     @property
     def psk(self):
         return getattr(self, "_psk", None)
@@ -134,6 +173,35 @@ class SSLPSKContext(ssl.SSLContext):
     @hint.setter
     def hint(self, hint):
         self._hint = hint
+
+    if not hasattr(ssl.SSLContext, "set_psk_client_callback"):
+
+        def set_psk_client_callback(self, callback):
+            """Backport of ``ssl.SSLContext.set_psk_client_callback()`` (Python 3.13).
+
+            :param callback: ``callable(hint: str | None) -> (identity: str | None, psk: bytes)``,
+                or ``None`` to remove it
+            """
+            if self.protocol == ssl.PROTOCOL_TLS_SERVER:
+                raise ssl.SSLError("Cannot add PSK client callback to a PROTOCOL_TLS_SERVER context")
+            if callback is not None and not callable(callback):
+                raise TypeError("callback must be callable")
+            self._sslpsk_client_callback = callback
+
+        def set_psk_server_callback(self, callback, identity_hint=None):
+            """Backport of ``ssl.SSLContext.set_psk_server_callback()`` (Python 3.13).
+
+            :param callback: ``callable(identity: str | None) -> psk: bytes``, or ``None`` to remove it
+            :param identity_hint: ``str`` sent to clients (TLS 1.2 and below), or ``None``
+            """
+            if self.protocol == ssl.PROTOCOL_TLS_CLIENT:
+                raise ssl.SSLError("Cannot add PSK server callback to a PROTOCOL_TLS_CLIENT context")
+            if callback is not None and not callable(callback):
+                raise TypeError("callback must be callable")
+            if identity_hint is not None and not isinstance(identity_hint, str):
+                raise TypeError("identity_hint must be str or None")
+            self._sslpsk_server_callback = callback
+            self._sslpsk_identity_hint = identity_hint if callback is not None else None
 
 
 class SSLPSKObject(ssl.SSLObject):
