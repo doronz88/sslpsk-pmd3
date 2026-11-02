@@ -35,6 +35,9 @@ jobs:
             python -W ignore::DeprecationWarning -m unittest sslpsk_pmd3.test.test_sslpsk -v
         with:
           output-dir: dist
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
       - name: Verify no shared library is bundled
         shell: bash
         run: |
