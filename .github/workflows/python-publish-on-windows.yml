@@ -6,6 +6,7 @@ name: Upload Python Package for macOS & Windows
 on:
   release:
     types: [ created ]
+  pull_request:
 
 jobs:
   deploy:
@@ -28,17 +29,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -U build setuptools wheel twine
-      - name: Install OpenSSL
-        if: matrix.os == 'windows-latest'
-        run: |
-          choco install openssl --no-progress
-          echo "INCLUDE=C:\Progra~1\OpenSSL\include" >> $GITHUB_ENV
-          echo "LIB=C:\Progra~1\OpenSSL\lib" >> $GITHUB_ENV
+      - name: Build
+        run: python -m build
+      - name: Test wheel
         shell: bash
-      - name: Build and publish
+        run: |
+          python -m pip install dist/*.whl
+          cd "$RUNNER_TEMP" && python -W ignore::DeprecationWarning "$GITHUB_WORKSPACE/.github/scripts/smoke_test.py"
+          python -W ignore::DeprecationWarning -m unittest sslpsk_pmd3.test.test_sslpsk -v
+      - name: Publish
+        if: github.event_name == 'release'
         env:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: |
-          python -m build
-          twine upload dist/* --skip-existing
+        run: twine upload dist/* --skip-existing

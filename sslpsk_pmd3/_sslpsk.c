@@ -16,7 +16,26 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#include <openssl/ssl.h>
+#include <stdint.h>
+
+/*
+ * OpenSSL is not linked. The SSL* objects belong to the OpenSSL that the
+ * interpreter's _ssl module uses, so the functions operating on them must come
+ * from that same library; any other copy may have a different struct layout.
+ * sslpsk.py resolves them from _ssl's OpenSSL and passes them to sslpsk_bind().
+ * These signatures are unchanged from OpenSSL 1.0 through 4.x and LibreSSL.
+ */
+typedef struct ssl_st SSL;
+
+typedef unsigned int (*psk_client_cb_t)(SSL*, const char*, char*, unsigned int,
+                                        unsigned char*, unsigned int);
+typedef unsigned int (*psk_server_cb_t)(SSL*, const char*, unsigned char*,
+                                        unsigned int);
+
+static void (*SSL_set_psk_client_callback)(SSL*, psk_client_cb_t);
+static void (*SSL_set_psk_server_callback)(SSL*, psk_server_cb_t);
+static int (*SSL_use_psk_identity_hint)(SSL*, const char*);
+static void (*SSL_set_accept_state)(SSL*);
 
 /* Copy PySSLObject/PySSLSocket from _ssl.c to expose the SSL*. */
 #if !defined(PY_MAJOR_VERSION) || (PY_VERSION_HEX < 0x02070000)
@@ -58,6 +77,37 @@ static PyObject* python_psk_client_callback;
  * (ssl_id, identity) => psk
  */
 static PyObject* python_psk_server_callback;
+
+/*
+ * Called from Python with the addresses of the OpenSSL functions used above.
+ */
+static PyObject* sslpsk_bind(PyObject* self, PyObject* args)
+{
+    unsigned long long set_client_cb, set_server_cb, use_hint, set_accept;
+
+    if (!PyArg_ParseTuple(args, "KKKK", &set_client_cb, &set_server_cb, &use_hint, &set_accept)) {
+        return NULL;
+    }
+    if (!set_client_cb || !set_server_cb || !use_hint || !set_accept) {
+        PyErr_SetString(PyExc_ValueError, "OpenSSL function address must not be NULL");
+        return NULL;
+    }
+    SSL_set_psk_client_callback = (void (*)(SSL*, psk_client_cb_t)) (uintptr_t) set_client_cb;
+    SSL_set_psk_server_callback = (void (*)(SSL*, psk_server_cb_t)) (uintptr_t) set_server_cb;
+    SSL_use_psk_identity_hint = (int (*)(SSL*, const char*)) (uintptr_t) use_hint;
+    SSL_set_accept_state = (void (*)(SSL*)) (uintptr_t) set_accept;
+
+    Py_RETURN_NONE;
+}
+
+static int sslpsk_check_bound(void)
+{
+    if (SSL_set_accept_state == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "sslpsk_bind() has not been called");
+        return 0;
+    }
+    return 1;
+}
 
 /*
  * Returns the index for an SSL socket, used to identity the socket across the
@@ -227,6 +277,10 @@ static PyObject* sslpsk_set_psk_client_callback(PyObject* self, PyObject* args)
         return NULL;
     }
 
+    if (!sslpsk_check_bound()) {
+        return NULL;
+    }
+
     ssl = ((PySSLSocket*) socket)->ssl;
     SSL_set_psk_client_callback(ssl, sslpsk_psk_client_callback);
 
@@ -243,6 +297,10 @@ static PyObject* sslpsk_set_psk_server_callback(PyObject* self, PyObject* args)
 
     if (!PyArg_ParseTuple(args, "O", &socket))
     {
+        return NULL;
+    }
+
+    if (!sslpsk_check_bound()) {
         return NULL;
     }
 
@@ -266,6 +324,10 @@ static PyObject* sslpsk_use_psk_identity_hint(PyObject* self, PyObject* args)
         return NULL;
     }
 
+    if (!sslpsk_check_bound()) {
+        return NULL;
+    }
+
     ssl = ((PySSLSocket*) socket) ->ssl;
     SSL_use_psk_identity_hint(ssl, hint);
 
@@ -285,6 +347,10 @@ static PyObject* sslpsk_set_accept_state(PyObject* self, PyObject* args)
         return NULL;
     }
 
+    if (!sslpsk_check_bound()) {
+        return NULL;
+    }
+
     ssl = ((PySSLSocket*) socket) ->ssl;
     SSL_set_accept_state(ssl);
 
@@ -293,6 +359,7 @@ static PyObject* sslpsk_set_accept_state(PyObject* self, PyObject* args)
 
 static PyMethodDef sslpsk_methods[] =
 {
+    {"sslpsk_bind", sslpsk_bind, METH_VARARGS, ""},
     {"sslpsk_set_python_psk_client_callback", sslpsk_set_python_psk_client_callback, METH_VARARGS, ""},
     {"sslpsk_set_python_psk_server_callback", sslpsk_set_python_psk_server_callback, METH_VARARGS, ""},
     {"sslpsk_set_psk_client_callback", sslpsk_set_psk_client_callback, METH_VARARGS, ""},
@@ -302,13 +369,10 @@ static PyMethodDef sslpsk_methods[] =
     {NULL, NULL, 0, NULL}
 };
 
-#define STRINGIFY(x) #x
-#define STRINGIFY_MACRO(x) STRINGIFY(x)
-
 #if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef sslpsk_moduledef = {
     PyModuleDef_HEAD_INIT,
-    "sslpsk_" STRINGIFY_MACRO(OPENSSL_VER),
+    "_sslpsk",
     NULL,
     0,
     sslpsk_methods,
@@ -320,15 +384,15 @@ static struct PyModuleDef sslpsk_moduledef = {
 #endif
 
 #if PY_MAJOR_VERSION >= 3
-PyMODINIT_FUNC PYINIT_SSLPSK_OPENSSL(void)
+PyMODINIT_FUNC PyInit__sslpsk(void)
 #else
-void INIT_SSLPSK_OPENSSL(void)
+void init_sslpsk(void)
 #endif
 {
 #if PY_MAJOR_VERSION >= 3
     PyObject* m = PyModule_Create(&sslpsk_moduledef);
 #else
-    PyObject* m = Py_InitModule("_sslpsk_" STRINGIFY_MACRO(OPENSSL_VER), sslpsk_methods);
+    PyObject* m = Py_InitModule("_sslpsk", sslpsk_methods);
 #endif
 
     if (m == NULL) {

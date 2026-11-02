@@ -14,15 +14,24 @@
 
 from __future__ import absolute_import
 
+import _ssl
 import ssl
+import threading
 import weakref
 
-import _ssl
+from sslpsk_pmd3 import _openssl_binding, _sslpsk
 
-if ssl.OPENSSL_VERSION_INFO >= (3, 0):
-    from sslpsk_pmd3 import _sslpsk_openssl3 as _sslpsk
-else:
-    from sslpsk_pmd3 import _sslpsk_openssl1 as _sslpsk
+_bind_lock = threading.Lock()
+_bound = False
+
+
+def _ensure_bound():
+    """Binds _sslpsk to the OpenSSL used by _ssl, on first use."""
+    global _bound
+    with _bind_lock:
+        if not _bound:
+            _sslpsk.sslpsk_bind(*_openssl_binding.bind_addresses())
+            _bound = True
 
 
 _callbacks = {}
@@ -81,17 +90,23 @@ _sslpsk.sslpsk_set_python_psk_server_callback(_python_psk_server_callback)
 
 
 def _ssl_set_psk_client_callback(sock, psk_cb):
+    _ensure_bound()
     ssl_id = _sslpsk.sslpsk_set_psk_client_callback(_sslobj(sock))
     _register_callback(sock, ssl_id, psk_cb)
 
 
 def _ssl_set_psk_server_callback(sock, psk_cb, hint):
+    _ensure_bound()
     ssl_id = _sslpsk.sslpsk_set_accept_state(_sslobj(sock))
     _ = _sslpsk.sslpsk_set_psk_server_callback(_sslobj(sock))
     _ = _sslpsk.sslpsk_use_psk_identity_hint(_sslobj(sock), hint if hint else b"")
     _register_callback(sock, ssl_id, psk_cb)
 
 def _ssl_setup_psk_callbacks(sslobj):
+    # do_handshake() is re-entered after every WANT_READ/WANT_WRITE on non-blocking sockets
+    if getattr(sslobj, "_sslpsk_configured", False):
+        return
+    sslobj._sslpsk_configured = True
     psk = sslobj.context.psk
     hint = sslobj.context.hint
     if psk:
@@ -136,38 +151,40 @@ class SSLPSKSocket(ssl.SSLSocket):
 SSLPSKContext.sslobject_class = SSLPSKObject
 SSLPSKContext.sslsocket_class = SSLPSKSocket
 
-def wrap_socket(*args, **kwargs):
-    """ """
-    do_handshake_on_connect = kwargs.get("do_handshake_on_connect", True)
-    kwargs["do_handshake_on_connect"] = False
+def wrap_socket(
+    sock,
+    keyfile=None,
+    certfile=None,
+    server_side=False,
+    cert_reqs=ssl.CERT_NONE,
+    ssl_version=ssl.PROTOCOL_TLS,
+    ca_certs=None,
+    do_handshake_on_connect=True,
+    suppress_ragged_eofs=True,
+    ciphers=None,
+    psk=None,
+    hint=None,
+):
+    """``ssl.wrap_socket()`` (removed in Python 3.12) with TLS-PSK support.
 
-    psk = kwargs.setdefault("psk", None)
-    del kwargs["psk"]
-
-    hint = kwargs.setdefault("hint", None)
-    del kwargs["hint"]
-
-    server_side = kwargs.setdefault("server_side", False)
-    if psk:
-        del kwargs["server_side"]  # bypass need for cert
-
-    sock = ssl.wrap_socket(*args, **kwargs)
-
-    if psk:
-        if server_side:
-            cb = psk if callable(psk) else lambda _identity: psk
-            _ssl_set_psk_server_callback(sock, cb, hint)
-        else:
-            cb = (
-                psk
-                if callable(psk)
-                else lambda _hint: psk
-                if isinstance(psk, tuple)
-                else (psk, b"")
-            )
-            _ssl_set_psk_client_callback(sock, cb)
-
-    if do_handshake_on_connect:
-        sock.do_handshake()
-
-    return sock
+    :param psk: client: ``bytes``, ``(psk, identity)`` or ``callable(hint) -> (psk, identity)``;
+        server: ``bytes`` or ``callable(identity) -> psk``
+    :param hint: server identity hint (``bytes``)
+    """
+    context = SSLPSKContext(ssl_version)
+    context.check_hostname = False
+    context.verify_mode = cert_reqs
+    if ca_certs:
+        context.load_verify_locations(ca_certs)
+    if certfile:
+        context.load_cert_chain(certfile, keyfile)
+    if ciphers:
+        context.set_ciphers(ciphers)
+    context.psk = psk
+    context.hint = hint
+    return context.wrap_socket(
+        sock=sock,
+        server_side=server_side,
+        do_handshake_on_connect=do_handshake_on_connect,
+        suppress_ragged_eofs=suppress_ragged_eofs,
+    )

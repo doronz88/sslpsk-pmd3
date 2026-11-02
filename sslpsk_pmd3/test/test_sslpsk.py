@@ -65,7 +65,7 @@ class sslpsk3Test(unittest.TestCase):
         
             # wrap socket with TLS-PSK
             self.server_psk_sock = sslpsk_pmd3.wrap_socket(self.server_socket, psk=self.psk, ciphers='PSK-AES256-CBC-SHA',
-                                                           ssl_version=ssl.PROTOCOL_TLSv1, server_side=True)
+                                                           ssl_version=ssl.PROTOCOL_TLSv1_2, server_side=True)
         
             # accept data from client
             data = self.server_psk_sock.recv(10)
@@ -79,7 +79,7 @@ class sslpsk3Test(unittest.TestCase):
         
         # wrap socket with TLS-PSK
         self.client_psk_sock = sslpsk_pmd3.wrap_socket(self.client_socket, psk=self.psk, ciphers='PSK-AES256-CBC-SHA',
-                                                       ssl_version=ssl.PROTOCOL_TLSv1, server_side=False)
+                                                       ssl_version=ssl.PROTOCOL_TLSv1_2, server_side=False)
         
         self.client_psk_sock.sendall(TEST_DATA)
         data = self.client_psk_sock.recv(10)
