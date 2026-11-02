@@ -16,12 +16,22 @@ from __future__ import absolute_import
 
 import _ssl
 import ssl
+import threading
 import weakref
 
-if ssl.OPENSSL_VERSION_INFO >= (3, 0):
-    from sslpsk_pmd3 import _sslpsk_openssl3 as _sslpsk
-else:
-    from sslpsk_pmd3 import _sslpsk_openssl1 as _sslpsk
+from sslpsk_pmd3 import _openssl_binding, _sslpsk
+
+_bind_lock = threading.Lock()
+_bound = False
+
+
+def _ensure_bound():
+    """Binds _sslpsk to the OpenSSL used by _ssl, on first use."""
+    global _bound
+    with _bind_lock:
+        if not _bound:
+            _sslpsk.sslpsk_bind(*_openssl_binding.bind_addresses())
+            _bound = True
 
 
 _callbacks = {}
@@ -80,11 +90,13 @@ _sslpsk.sslpsk_set_python_psk_server_callback(_python_psk_server_callback)
 
 
 def _ssl_set_psk_client_callback(sock, psk_cb):
+    _ensure_bound()
     ssl_id = _sslpsk.sslpsk_set_psk_client_callback(_sslobj(sock))
     _register_callback(sock, ssl_id, psk_cb)
 
 
 def _ssl_set_psk_server_callback(sock, psk_cb, hint):
+    _ensure_bound()
     ssl_id = _sslpsk.sslpsk_set_accept_state(_sslobj(sock))
     _ = _sslpsk.sslpsk_set_psk_server_callback(_sslobj(sock))
     _ = _sslpsk.sslpsk_use_psk_identity_hint(_sslobj(sock), hint if hint else b"")

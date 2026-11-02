@@ -27,13 +27,6 @@ jobs:
         run: |
           python -m pip install isort
           isort . -m HANGING_INDENT -l 120 --check-only
-      - name: Install OpenSSL
-        if: matrix.os == 'windows-latest'
-        run: |
-          choco install openssl --no-progress
-          echo "INCLUDE=C:\Progra~1\OpenSSL\include" >> $GITHUB_ENV
-          echo "LIB=C:\Progra~1\OpenSSL\lib" >> $GITHUB_ENV
-        shell: bash
       - name: Test build
         run: |
           python -m pip install --upgrade build
@@ -42,3 +35,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -U .
+      - name: Test TLS-PSK handshake
+        shell: bash
+        run: cd "$RUNNER_TEMP" && python -W ignore::DeprecationWarning "$GITHUB_WORKSPACE/.github/scripts/smoke_test.py"

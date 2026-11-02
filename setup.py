@@ -12,39 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License
 
-import sys
-
 from setuptools import Extension, setup
 
-if sys.platform == 'win32':
-    libraries = ['libcrypto', 'libssl']
-else:
-    libraries = ['crypto', 'ssl']
+# OpenSSL is deliberately not linked: _sslpsk binds at runtime to the OpenSSL
+# used by the interpreter's own _ssl module (see sslpsk.py).
+extension = Extension("sslpsk_pmd3._sslpsk", sources=["sslpsk_pmd3/_sslpsk.c"])
 
-extension_openssl1 = Extension(
-    "sslpsk_pmd3._sslpsk_openssl1",
-    sources=["sslpsk_pmd3/_sslpsk.c"],
-    libraries=libraries,
-    include_dirs=["openssl1/include/"],
-    library_dirs=["openssl1/lib/VC/"],
-    define_macros=[
-        ("OPENSSL_VER", "openssl1"),
-        ("INIT_SSLPSK_OPENSSL", "init_sslpsk_openssl1"),
-        ("PYINIT_SSLPSK_OPENSSL", "PyInit__sslpsk_openssl1"),
-    ],
-)
-
-extension_openssl3 = Extension(
-    "sslpsk_pmd3._sslpsk_openssl3",
-    sources=["sslpsk_pmd3/_sslpsk.c"],
-    libraries=libraries,
-    include_dirs=["openssl3/include/"],
-    library_dirs=["openssl3/lib/VC/"],
-    define_macros=[
-        ("OPENSSL_VER", "openssl3"),
-        ("INIT_SSLPSK_OPENSSL", "init_sslpsk_openssl3"),
-        ("PYINIT_SSLPSK_OPENSSL", "PyInit__sslpsk_openssl3"),
-    ],
-)
-
-setup(name='pytun-pmd3', ext_modules=[extension_openssl1, extension_openssl3])
+setup(ext_modules=[extension])
