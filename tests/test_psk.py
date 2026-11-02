@@ -523,3 +523,41 @@ def test_binding_failure_is_a_clean_error(monkeypatch):
     monkeypatch.setattr(_openssl_binding, "FUNCTIONS", _openssl_binding.FUNCTIONS + ("sslpsk_no_such_function",))
     with pytest.raises(RuntimeError):
         _openssl_binding.bind_addresses()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="dladdr-based binding")
+def test_binding_without_dladdr_symbol_names(monkeypatch):
+    # glibc's dladdr() names no symbol for hidden code (python-build-standalone on Linux);
+    # the binding must not depend on it.
+    from sslpsk_pmd3 import _openssl_binding
+
+    expected = _openssl_binding.bind_addresses()
+    real_factory = _openssl_binding._dladdr_function
+
+    def factory():
+        real = real_factory()
+
+        def dladdr(address, info_ref):
+            result = real(address, info_ref)
+            info_ref._obj.dli_sname = None
+            info_ref._obj.dli_saddr = None
+            return result
+
+        return dladdr
+
+    monkeypatch.setattr(_openssl_binding, "_dladdr_function", factory)
+    assert _openssl_binding.bind_addresses() == expected
+
+
+@pytest.mark.skipif(not getattr(sys, "_is_gil_enabled", None) or sys._is_gil_enabled(), reason="free-threaded only")
+def test_free_threaded_import_keeps_gil_disabled():
+    import os
+    import subprocess
+
+    env = {k: v for k, v in os.environ.items() if k != "PYTHON_GIL"}
+    code = "import sslpsk_pmd3.sslpsk, sys; print(sys._is_gil_enabled())"
+    result = subprocess.run(
+        [sys.executable, "-W", "error::RuntimeWarning", "-c", code], capture_output=True, text=True, env=env
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "False"
