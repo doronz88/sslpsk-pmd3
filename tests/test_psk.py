@@ -523,3 +523,27 @@ def test_binding_failure_is_a_clean_error(monkeypatch):
     monkeypatch.setattr(_openssl_binding, "FUNCTIONS", _openssl_binding.FUNCTIONS + ("sslpsk_no_such_function",))
     with pytest.raises(RuntimeError):
         _openssl_binding.bind_addresses()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="dladdr-based binding")
+def test_binding_without_dladdr_symbol_names(monkeypatch):
+    # glibc's dladdr() names no symbol for hidden code (python-build-standalone on Linux);
+    # the binding must not depend on it.
+    from sslpsk_pmd3 import _openssl_binding
+
+    expected = _openssl_binding.bind_addresses()
+    real_factory = _openssl_binding._dladdr_function
+
+    def factory():
+        real = real_factory()
+
+        def dladdr(address, info_ref):
+            result = real(address, info_ref)
+            info_ref._obj.dli_sname = None
+            info_ref._obj.dli_saddr = None
+            return result
+
+        return dladdr
+
+    monkeypatch.setattr(_openssl_binding, "_dladdr_function", factory)
+    assert _openssl_binding.bind_addresses() == expected
