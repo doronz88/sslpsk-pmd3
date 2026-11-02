@@ -19,7 +19,6 @@ loaded, so a same-named function from an unrelated library is never used.
 
 import _ssl
 import ctypes
-import glob
 import os
 import struct
 import sys
@@ -64,16 +63,68 @@ def bind_addresses():
 
 
 def _windows_addresses():
-    # _ssl.pyd links libssl dynamically; CPython ships it next to _ssl.pyd and it is
-    # already loaded, so loading it by full path returns that same module.
-    ssl_module_dir = os.path.dirname(_ssl.__file__)
-    for path in sorted(glob.glob(os.path.join(ssl_module_dir, "libssl*.dll"))):
-        library = ctypes.CDLL(path)
+    # _ssl.pyd links libssl dynamically. Its import table names the exact DLL, which is
+    # already loaded wherever the distribution keeps it (next to _ssl.pyd for python.org,
+    # Library\bin for conda, ...), so take that loaded module rather than searching for one.
+    names = [name for name in _pe_imported_dlls(_ssl.__file__) if name.lower().startswith(("libssl", "ssleay"))]
+    get_module_handle = ctypes.WinDLL("kernel32", use_last_error=True).GetModuleHandleW
+    get_module_handle.argtypes = [ctypes.c_wchar_p]
+    get_module_handle.restype = ctypes.c_void_p
+    for name in names:
+        handle = get_module_handle(name)
+        if not handle:
+            continue
+        library = ctypes.CDLL(name, handle=handle)
         try:
-            return [ctypes.cast(getattr(library, name), ctypes.c_void_p).value for name in FUNCTIONS]
+            return [ctypes.cast(getattr(library, function), ctypes.c_void_p).value for function in FUNCTIONS]
         except AttributeError:
             continue
-    raise RuntimeError("sslpsk_pmd3: libssl not found next to {}".format(_ssl.__file__))
+    raise RuntimeError(
+        "sslpsk_pmd3: cannot locate the libssl used by {} (imports: {})".format(
+            _ssl.__file__, ", ".join(names) or "none"
+        )
+    )
+
+
+def _pe_imported_dlls(path):
+    """Returns the DLL names in the import table of the PE image at ``path``."""
+    with open(path, "rb") as f:
+        data = f.read()
+    pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
+    if data[pe_offset:pe_offset + 4] != b"PE\0\0":
+        raise RuntimeError("sslpsk_pmd3: {} is not a PE image".format(path))
+    coff = pe_offset + 4
+    section_count = struct.unpack_from("<H", data, coff + 2)[0]
+    optional_header_size = struct.unpack_from("<H", data, coff + 16)[0]
+    optional_header = coff + 20
+    is_pe32_plus = struct.unpack_from("<H", data, optional_header)[0] == 0x20B
+    data_directories = optional_header + (112 if is_pe32_plus else 96)
+    import_rva = struct.unpack_from("<I", data, data_directories + 8)[0]  # IMAGE_DIRECTORY_ENTRY_IMPORT
+
+    sections = []
+    for i in range(section_count):
+        entry = optional_header + optional_header_size + i * 40
+        virtual_size, virtual_address, raw_size, raw_pointer = struct.unpack_from("<IIII", data, entry + 8)
+        sections.append((virtual_address, max(virtual_size, raw_size), raw_pointer))
+
+    def offset_of(rva):
+        for virtual_address, size, raw_pointer in sections:
+            if virtual_address <= rva < virtual_address + size:
+                return raw_pointer + rva - virtual_address
+        raise RuntimeError("sslpsk_pmd3: RVA {:#x} is outside {}'s sections".format(rva, path))
+
+    names = []
+    if not import_rva:
+        return names
+    descriptor = offset_of(import_rva)
+    while True:
+        original_first_thunk, _, _, name_rva, first_thunk = struct.unpack_from("<IIIII", data, descriptor)
+        if not (original_first_thunk or name_rva or first_thunk):
+            break
+        name_offset = offset_of(name_rva)
+        names.append(data[name_offset:data.index(b"\0", name_offset)].decode("ascii"))
+        descriptor += 20
+    return names
 
 
 class _DlInfo(ctypes.Structure):
