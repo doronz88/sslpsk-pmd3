@@ -26,6 +26,7 @@ def make_context(server_side: bool) -> SSLPSKContext:
 def main() -> None:
     print(ssl.OPENSSL_VERSION)
     listener = socket.create_server(("127.0.0.1", 0))
+    listener.settimeout(10)
     port = listener.getsockname()[1]
     errors = []
 
@@ -39,7 +40,7 @@ def main() -> None:
 
     thread = threading.Thread(target=serve, daemon=True)
     thread.start()
-    with make_context(server_side=False).wrap_socket(socket.create_connection(("127.0.0.1", port))) as tls:
+    with make_context(server_side=False).wrap_socket(socket.create_connection(("127.0.0.1", port), timeout=10)) as tls:
         tls.sendall(b"ping")
         reply = tls.recv(4)
         print(tls.version(), tls.cipher())
