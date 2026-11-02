@@ -42,3 +42,6 @@ version_file = "sslpsk_pmd3/_version.py"
 [build-system]
 requires = ["setuptools>=43.0.0", "setuptools_scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.isort]
+extra_standard_library = ["_ssl"]

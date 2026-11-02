@@ -14,10 +14,9 @@
 
 from __future__ import absolute_import
 
+import _ssl
 import ssl
 import weakref
-
-import _ssl
 
 if ssl.OPENSSL_VERSION_INFO >= (3, 0):
     from sslpsk_pmd3 import _sslpsk_openssl3 as _sslpsk
