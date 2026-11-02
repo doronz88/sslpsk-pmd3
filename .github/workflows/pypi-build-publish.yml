@@ -31,8 +31,9 @@ jobs:
         uses: pypa/cibuildwheel@v4.3.5
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: >-
-            python -W ignore::DeprecationWarning {project}/.github/scripts/smoke_test.py &&
+            python -m pytest -p no:cacheprovider -v -W ignore::DeprecationWarning {project}/tests &&
             python -W ignore::DeprecationWarning -m unittest sslpsk_pmd3.test.test_sslpsk -v
         with:
           output-dir: dist
