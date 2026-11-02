@@ -33,6 +33,9 @@ class sslpsk3Test(unittest.TestCase):
         self.client_socket = socket.socket()
         self.server_socket = None
         self.accept_socket = socket.socket()
+        # fail instead of blocking forever if the other side dies
+        self.client_socket.settimeout(10)
+        self.accept_socket.settimeout(10)
         self.client_psk_sock = None
         self.server_psk_sock = None
 
@@ -42,6 +45,8 @@ class sslpsk3Test(unittest.TestCase):
         for sock in [self.client_psk_sock or self.client_socket,
                      self.server_psk_sock or self.server_socket,
                      self.accept_socket]:
+            if sock is None:
+                continue
             try:
                 sock.shutdown(socket.SHUT_RDWR)
             except socket.error:
@@ -56,6 +61,10 @@ class sslpsk3Test(unittest.TestCase):
         self.server_psk_sock = None
 
     def startServer(self):
+        # OpenSSL 1.1.1 on Windows ARM64 (CPython 3.9/3.10) races when two threads create
+        # their first SSL_CTX concurrently ("malloc failure"); initialize it here first.
+        ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
         self.accept_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.accept_socket.bind(self.addr)
         self.accept_socket.listen(1)
@@ -71,7 +80,7 @@ class sslpsk3Test(unittest.TestCase):
             data = self.server_psk_sock.recv(10)
             self.server_psk_sock.sendall(data.upper())
 
-        threading.Thread(target = accept).start()
+        threading.Thread(target = accept, daemon=True).start()
 
     def testClient(self):
         # initialize

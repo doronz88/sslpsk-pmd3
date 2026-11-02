@@ -9,6 +9,7 @@ jobs:
   wheels:
     name: Wheels (${{ matrix.os }}, ${{ matrix.arch }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -16,8 +17,8 @@ jobs:
           - { os: ubuntu-latest, arch: x86_64 }
           - { os: ubuntu-latest, arch: i686 }
           - { os: ubuntu-24.04-arm, arch: aarch64 }
-          - { os: macos-latest, arch: arm64 }
-          - { os: macos-latest, arch: x86_64 }
+          # one job for both architectures: macOS runners are the scarcest
+          - { os: macos-latest, arch: "arm64,x86_64" }
           - { os: windows-latest, arch: AMD64 }
           - { os: windows-11-arm, arch: ARM64 }
 
@@ -30,11 +31,15 @@ jobs:
         uses: pypa/cibuildwheel@v4.3.5
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: >-
-            python -W ignore::DeprecationWarning {project}/.github/scripts/smoke_test.py &&
+            python -m pytest -p no:cacheprovider -v -W ignore::DeprecationWarning {project}/tests &&
             python -W ignore::DeprecationWarning -m unittest sslpsk_pmd3.test.test_sslpsk -v
         with:
           output-dir: dist
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
       - name: Verify no shared library is bundled
         shell: bash
         run: |
