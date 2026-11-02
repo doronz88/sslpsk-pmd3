@@ -103,6 +103,10 @@ def _ssl_set_psk_server_callback(sock, psk_cb, hint):
     _register_callback(sock, ssl_id, psk_cb)
 
 def _ssl_setup_psk_callbacks(sslobj):
+    # do_handshake() is re-entered after every WANT_READ/WANT_WRITE on non-blocking sockets
+    if getattr(sslobj, "_sslpsk_configured", False):
+        return
+    sslobj._sslpsk_configured = True
     psk = sslobj.context.psk
     hint = sslobj.context.hint
     if psk:
