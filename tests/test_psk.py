@@ -10,6 +10,7 @@ import socket
 import ssl
 import sys
 import threading
+import traceback
 
 import pytest
 
@@ -370,21 +371,27 @@ def test_concurrent_connections_use_their_own_callbacks():
     server.set_psk_server_callback(lambda identity: keys[identity])
     errors = []
 
-    def connect(identity):
+    def handshake(identity, sock):
         try:
             ctx = client_context()
             ctx.set_psk_client_callback(lambda hint: (identity, keys[identity]))
-            exchange(ctx, srv.port, identity.encode())
-        except Exception as e:  # noqa: BLE001
-            errors.append(e)
+            with ctx.wrap_socket(sock) as tls:
+                tls.sendall(identity.encode())
+                assert tls.recv(64) == identity.encode()[::-1]
+        except Exception:  # noqa: BLE001
+            errors.append(traceback.format_exc())
 
     with EchoServer(server, count=count) as srv:
-        threads = [threading.Thread(target=connect, args=(name,)) for name in keys]
+        # Connect sequentially and run only the TLS handshakes concurrently: truly parallel
+        # loopback connect() calls (free-threaded builds) can get a transient EAGAIN from
+        # the kernel on musl containers, which is not what this test is about.
+        socks = {name: socket.create_connection(("127.0.0.1", srv.port), timeout=TIMEOUT) for name in keys}
+        threads = [threading.Thread(target=handshake, args=item) for item in socks.items()]
         for t in threads:
             t.start()
         for t in threads:
             t.join(TIMEOUT)
-    assert not errors
+    assert not errors, "\n".join(errors)
     assert not srv.errors
 
 
