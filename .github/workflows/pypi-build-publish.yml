@@ -31,6 +31,10 @@ jobs:
         uses: pypa/cibuildwheel@v4.3.5
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
+          # CPython 3.9.10 for Windows ARM64 (experimental nuget build, OpenSSL 1.1.1m)
+          # intermittently fails stdlib SSLContext() with "malloc failure" when a
+          # non-main thread creates the first context, before sslpsk is involved.
+          CIBW_TEST_SKIP: cp39-win_arm64
           CIBW_TEST_COMMAND: >-
             python -W ignore::DeprecationWarning {project}/.github/scripts/smoke_test.py &&
             python -W ignore::DeprecationWarning -m unittest sslpsk_pmd3.test.test_sslpsk -v
