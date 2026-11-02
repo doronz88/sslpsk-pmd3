@@ -17,7 +17,7 @@ def server(host, port):
     sock, _ = tcp_sock.accept()
     ssl_sock = sslpsk_pmd3.wrap_socket(sock,
                                        server_side = True,
-                                       ssl_version=ssl.PROTOCOL_TLSv1,
+                                       ssl_version=ssl.PROTOCOL_TLSv1_2,
                                        ciphers='ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH',
                                        psk=lambda identity: PSKS[identity],
                                        hint=b'server1')

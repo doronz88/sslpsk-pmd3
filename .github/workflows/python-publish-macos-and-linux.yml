@@ -41,7 +41,9 @@ jobs:
       - name: Build wheels
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
-          CIBW_TEST_COMMAND: 'python -W ignore::DeprecationWarning {project}/.github/scripts/smoke_test.py'
+          CIBW_TEST_COMMAND: >-
+            python -W ignore::DeprecationWarning {project}/.github/scripts/smoke_test.py &&
+            python -W ignore::DeprecationWarning -m unittest sslpsk_pmd3.test.test_sslpsk -v
         run: cibuildwheel --output-dir dist
       - name: Verify no OpenSSL is bundled
         run: |

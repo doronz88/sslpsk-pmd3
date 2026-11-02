@@ -36,6 +36,7 @@ jobs:
         run: |
           python -m pip install dist/*.whl
           cd "$RUNNER_TEMP" && python -W ignore::DeprecationWarning "$GITHUB_WORKSPACE/.github/scripts/smoke_test.py"
+          python -W ignore::DeprecationWarning -m unittest sslpsk_pmd3.test.test_sslpsk -v
       - name: Publish
         if: github.event_name == 'release'
         env:

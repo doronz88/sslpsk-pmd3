@@ -37,4 +37,7 @@ jobs:
           python -m pip install -U .
       - name: Test TLS-PSK handshake
         shell: bash
-        run: cd "$RUNNER_TEMP" && python -W ignore::DeprecationWarning "$GITHUB_WORKSPACE/.github/scripts/smoke_test.py"
+        run: |
+          cd "$RUNNER_TEMP"
+          python -W ignore::DeprecationWarning "$GITHUB_WORKSPACE/.github/scripts/smoke_test.py"
+          python -W ignore::DeprecationWarning -m unittest sslpsk_pmd3.test.test_sslpsk -v
