@@ -547,3 +547,17 @@ def test_binding_without_dladdr_symbol_names(monkeypatch):
 
     monkeypatch.setattr(_openssl_binding, "_dladdr_function", factory)
     assert _openssl_binding.bind_addresses() == expected
+
+
+@pytest.mark.skipif(not getattr(sys, "_is_gil_enabled", None) or sys._is_gil_enabled(), reason="free-threaded only")
+def test_free_threaded_import_keeps_gil_disabled():
+    import os
+    import subprocess
+
+    env = {k: v for k, v in os.environ.items() if k != "PYTHON_GIL"}
+    code = "import sslpsk_pmd3.sslpsk, sys; print(sys._is_gil_enabled())"
+    result = subprocess.run(
+        [sys.executable, "-W", "error::RuntimeWarning", "-c", code], capture_output=True, text=True, env=env
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "False"

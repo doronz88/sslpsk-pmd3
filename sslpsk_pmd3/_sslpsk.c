@@ -418,6 +418,15 @@ void init_sslpsk(void)
 #endif
     }
 
+#ifdef Py_GIL_DISABLED
+    /*
+     * Safe without the GIL: the Python callbacks and the OpenSSL function pointers are
+     * set once (at import / under sslpsk.py's bind lock) before any use, and the OpenSSL
+     * callbacks attach with PyGILState_Ensure().
+     */
+    PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
+#endif
+
 #if PY_MAJOR_VERSION >= 3
     return m;
 #endif
