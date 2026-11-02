@@ -10,6 +10,7 @@ import socket
 import ssl
 import sys
 import threading
+import traceback
 
 import pytest
 
@@ -375,8 +376,8 @@ def test_concurrent_connections_use_their_own_callbacks():
             ctx = client_context()
             ctx.set_psk_client_callback(lambda hint: (identity, keys[identity]))
             exchange(ctx, srv.port, identity.encode())
-        except Exception as e:  # noqa: BLE001
-            errors.append(e)
+        except Exception:  # noqa: BLE001
+            errors.append(traceback.format_exc())
 
     with EchoServer(server, count=count) as srv:
         threads = [threading.Thread(target=connect, args=(name,)) for name in keys]
@@ -384,7 +385,7 @@ def test_concurrent_connections_use_their_own_callbacks():
             t.start()
         for t in threads:
             t.join(TIMEOUT)
-    assert not errors
+    assert not errors, "\n".join(errors)
     assert not srv.errors
 
 
