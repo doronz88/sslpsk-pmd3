@@ -29,6 +29,7 @@ FUNCTIONS = (
     "SSL_set_psk_server_callback",
     "SSL_use_psk_identity_hint",
     "SSL_set_accept_state",
+    "SSL_set_session_id_context",
 )
 
 _POINTER_SIZE = ctypes.sizeof(ctypes.c_void_p)
